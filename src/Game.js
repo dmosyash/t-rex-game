@@ -9,17 +9,17 @@ const STATUS = {
 };
 
 const JUMP_DELTA = 5;
-const JUMP_MAX_HEIGHT = 60;
+const JUMP_MAX_HEIGHT = 58;
 
 export default class Game extends React.Component {
   constructor(props) {
     super(props);
 
-
     let imageLoadCount = 0;
     let onImageLoaded = () => {
       ++imageLoadCount;
       if (imageLoadCount === 3) {
+        this.obstacles = this.__obstaclesGenerate();
         this.__draw();
       }
     };
@@ -50,17 +50,32 @@ export default class Game extends React.Component {
     this.gotPointsSound.src = 'http://first.laughguru.com/assets/audio/Positive-Bingo.wav';
 
     this.options = {
-      fps: 120,
+      fps: this.props.settings.fps ? this.props.settings.fps : 120,
       skySpeed: 40,
       groundSpeed: 200,
+      minimum_distance: 600,
       skyImage: skyImage,
       groundImage: groundImage,
       playerImage: [playerImage, playerLeftImage, playerRightImage, playerDieImage],
       obstacleImage: obstacleImage,
       coinImage: coinImage,
       skyOffset: 0,
-      groundOffset: 0
-  };
+      groundOffset: 0,
+      acceleration: 50
+    };
+    if (this.props.settings.acceleration) {
+      let acceleration = parseFloat(this.props.settings.acceleration, 10);
+      let accel = parseInt(50 / acceleration, 10);
+      let idealAcceleration = parseInt(parseFloat((120 / this.options.fps), 10) * 50, 10);
+      this.options.acceleration = accel < idealAcceleration ? accel : idealAcceleration;
+    } else {
+      this.options.acceleration = parseInt(parseFloat((120 / this.options.fps), 10) * 50, 10)
+    }
+
+    this.styleCanvas = { width: this.props.width }
+
+    this.options.skySpeed = parseInt(this.options.fps / 3, 10);
+    this.options.groundSpeed = parseInt((this.options.fps * 10) / 6, 10);
 
     this.status = STATUS.STOP;
     this.timer = null;
@@ -69,7 +84,6 @@ export default class Game extends React.Component {
     this.jumpHeight = 0;
     this.jumpDelta = 0;
     this.obstaclesBase = 1;
-    this.obstacles = this.__obstaclesGenerate();
     this.currentDistance = 0;
     this.playerStatus = 0;
   }
@@ -95,12 +109,19 @@ export default class Game extends React.Component {
       }
     };
 
+    const onEnterPress = () => {
+      this.stop();
+    }
+
     window.onkeydown = function (e) {
       if (e.key === ' ') {
         onSpacePress();
       }
       if (e.key === 'ArrowUp') {
           onSpacePress();
+      }
+      if (e.key === 'Enter') {
+        onEnterPress();
       }
     };
     this.canvas.parentNode.onclick = onSpacePress;
@@ -118,10 +139,8 @@ export default class Game extends React.Component {
     if (!this.canvas) {
       return;
     }
-
     const { options } = this;
-
-    let level = Math.min(200, Math.floor(this.score / 50));
+    let level = Math.min(200, Math.floor(this.score / options.acceleration));
     let groundSpeed = (options.groundSpeed + level) / options.fps;
     let skySpeed = options.skySpeed / options.fps;
     let obstacleWidth = options.obstacleImage.width;
@@ -164,9 +183,6 @@ export default class Game extends React.Component {
     else if (this.jumpHeight < JUMP_MAX_HEIGHT && this.jumpDelta > 0) {
       this.jumpDelta = (this.jumpHeight * this.jumpHeight) * 0.001033 - this.jumpHeight * 0.137 + 5;
     }
-    else if (this.jumpHeight < JUMP_MAX_HEIGHT && this.jumpDelta < 0) {
-      // jumpDelta = (jumpHeight * jumpHeight) * 0.00023 - jumpHeight * 0.03 - 4;
-    }
     else if (this.jumpHeight >= JUMP_MAX_HEIGHT) {
       this.jumpDelta = -JUMP_DELTA / 2.7;
     }
@@ -198,28 +214,28 @@ export default class Game extends React.Component {
     }
 
     // 障碍
-    let pop = 0;
-    for (let i = 0; i < this.obstacles.length; ++i) {
-      if (this.currentDistance >= this.obstacles[i].distance) {
-        let offset = width - (this.currentDistance - this.obstacles[i].distance + groundSpeed);
-        if (offset > 0) {
-          let image = this.obstacles[i].isCoin ? options.coinImage : options.obstacleImage;
-          ctx.drawImage(image, offset, this.obstacles[i].height);
-        }
-        else {
-          ++pop;
-        }
-      }
-      else {
-        break;
-      }
-    }
-    for (let i = 0; i < pop; i++) {
-      this.obstacles.shift();
-    }
-    if (this.obstacles.length < 5) {
-      this.obstacles = this.obstacles.concat(this.__obstaclesGenerate());
-    }
+    // let pop = 0;
+    // for (let i = 0; i < this.obstacles.length; ++i) {
+    //   if (this.currentDistance >= this.obstacles[i].distance) {
+    //     let offset = width - (this.currentDistance - this.obstacles[i].distance + groundSpeed);
+    //     if (offset > 0) {
+    //       let image = this.obstacles[i].isCoin ? options.coinImage : options.obstacleImage;
+    //       ctx.drawImage(image, offset, this.obstacles[i].height);
+    //     }
+    //     else {
+    //       ++pop;
+    //     }
+    //   }
+    //   else {
+    //     break;
+    //   }
+    // }
+    // for (let i = 0; i < pop; i++) {
+    //   this.obstacles.shift();
+    // }
+    // if (this.obstacles.length < 5) {
+    //   this.obstacles = this.obstacles.concat(this.__obstaclesGenerate());
+    // }
 
     // 碰撞检测
     let firstOffset = width - (this.currentDistance - this.obstacles[0].distance + groundSpeed);
@@ -228,12 +244,10 @@ export default class Game extends React.Component {
         firstOffset < 60 + playerWidth) {
         if (this.obstacles[0].height === 84) {
           if (64 - this.jumpHeight + playerHeight > 84) {
-            this.obstacles.shift();
             this.grab();
           }
         } else {
           if (80 - (this.jumpHeight + playerHeight) < this.obstacles[0].height) {
-            this.obstacles.shift();
             this.grab();
           }
         }
@@ -257,11 +271,10 @@ export default class Game extends React.Component {
   __obstaclesGenerate() {
     let res = [];
     for (let i = 0; i < 10; ++i) {
-      let random = Math.floor(Math.random() * 100) % 70;
-      let bool = parseInt(Math.random() * 10) % 2;
-      let boolCoin = parseInt(Math.random() * 10) % 2;
+      let random = Math.floor(Math.random() * 100) % 60;
+      let bool = parseInt(Math.random() * 10, 10) % 2;
+      let boolCoin = parseInt(Math.random() * 10, 10) % 2;
       random = (bool === 0 ? 1 : -1) * random;
-      console.log(this.options.playerImage[0].height);
       res.push({
         distance: random + this.obstaclesBase * 200,
         height: bool ? 84 : 64 - this.options.playerImage[0].height,
@@ -300,56 +313,58 @@ export default class Game extends React.Component {
     this.status = STATUS.START;
     this.__setTimer();
     this.jump();
-};
+  };
 
-pause = () => {
-  if (this.status === STATUS.START) {
-    this.status = STATUS.PAUSE;
+  pause = () => {
+    if (this.status === STATUS.START) {
+      this.status = STATUS.PAUSE;
+      this.__clearTimer();
+    }
+  };
+
+  goOn = () => {
+    if (this.status === STATUS.PAUSE) {
+      this.status = STATUS.START;
+      this.__setTimer();
+    }
+  };
+
+  stop = () => {
+    if (this.status === STATUS.OVER) {
+      return;
+    }
+    this.status = STATUS.OVER;
+    this.playerStatus = 3;
     this.__clearTimer();
+    this.__draw();
+    this.__clear();
+  };
+
+  grab = () => {
+    if (this.status === STATUS.OVER) {
+      return;
+    }
+    this.score += 10;
+    this.gotPointsSound.play();
+    this.obstacles.shift();
+  }  
+
+  restart = () => {
+    this.obstacles = this.__obstaclesGenerate();
+    this.start();
+  };
+
+  jump = () => {
+    if (this.jumpHeight > 2) {
+      return;
+    }
+    this.jumpDelta = JUMP_DELTA;
+    this.jumpHeight = JUMP_DELTA;
+  };
+
+  render() {
+    return (
+      <canvas id="canvas" ref={ref => this.canvas = ref} height={160} style={this.styleCanvas} />
+    );
   }
-};
-
-goOn = () => {
-  if (this.status === STATUS.PAUSE) {
-    this.status = STATUS.START;
-    this.__setTimer();
-  }
-};
-
-stop = () => {
-  if (this.status === STATUS.OVER) {
-    return;
-  }
-  this.status = STATUS.OVER;
-  this.playerStatus = 3;
-  this.__clearTimer();
-  this.__draw();
-  this.__clear();
-};
-
-grab = () => {
-  if (this.status === STATUS.OVER) {
-    return;
-  }
-  this.gotPointsSound.play();
-}  
-
-restart = () => {
-  this.obstacles = this.__obstaclesGenerate();
-  this.start();
-};
-
-jump = () => {
-  if (this.jumpHeight > 2) {
-    return;
-  }
-  this.jumpDelta = JUMP_DELTA;
-  this.jumpHeight = JUMP_DELTA;
-};
-
-render() {
-  return (
-    <canvas id="canvas" ref={ref => this.canvas = ref} height={160} width={340} />
-);
-}
 };
