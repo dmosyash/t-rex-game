@@ -32,6 +32,8 @@ export default class Game extends React.Component {
     let playerRightImage = new Image();
     let playerDieImage = new Image();
     let obstacleImage = new Image();
+    let coinImage = new Image();
+    this.gotPointsSound = new Audio();
 
     skyImage.onload = onImageLoaded;
     groundImage.onload = onImageLoaded;
@@ -44,6 +46,8 @@ export default class Game extends React.Component {
     playerRightImage.src = require('./img/dinosaur_right.png');
     playerDieImage.src = require('./img/dinosaur_die.png');
     obstacleImage.src = require('./img/obstacle.png');
+    coinImage.src = require('./img/coin.png');
+    this.gotPointsSound.src = 'http://first.laughguru.com/assets/audio/Positive-Bingo.wav';
 
     this.options = {
       fps: 120,
@@ -53,6 +57,7 @@ export default class Game extends React.Component {
       groundImage: groundImage,
       playerImage: [playerImage, playerLeftImage, playerRightImage, playerDieImage],
       obstacleImage: obstacleImage,
+      coinImage: coinImage,
       skyOffset: 0,
       groundOffset: 0
   };
@@ -84,6 +89,8 @@ export default class Game extends React.Component {
           break;
         case STATUS.OVER:
           this.restart();
+          break;
+        default:
           break;
       }
     };
@@ -118,6 +125,7 @@ export default class Game extends React.Component {
     let groundSpeed = (options.groundSpeed + level) / options.fps;
     let skySpeed = options.skySpeed / options.fps;
     let obstacleWidth = options.obstacleImage.width;
+    let coinWidth = options.coinImage.width;
     let playerWidth = options.playerImage[0].width;
     let playerHeight = options.playerImage[0].height;
 
@@ -195,7 +203,8 @@ export default class Game extends React.Component {
       if (this.currentDistance >= this.obstacles[i].distance) {
         let offset = width - (this.currentDistance - this.obstacles[i].distance + groundSpeed);
         if (offset > 0) {
-          ctx.drawImage(options.obstacleImage, offset, 84);
+          let image = this.obstacles[i].isCoin ? options.coinImage : options.obstacleImage;
+          ctx.drawImage(image, offset, this.obstacles[i].height);
         }
         else {
           ++pop;
@@ -205,7 +214,7 @@ export default class Game extends React.Component {
         break;
       }
     }
-    for (let i = 0; i < pop; ++i) {
+    for (let i = 0; i < pop; i++) {
       this.obstacles.shift();
     }
     if (this.obstacles.length < 5) {
@@ -214,10 +223,32 @@ export default class Game extends React.Component {
 
     // 碰撞检测
     let firstOffset = width - (this.currentDistance - this.obstacles[0].distance + groundSpeed);
-    if (90 - obstacleWidth < firstOffset
-      && firstOffset < 60 + playerWidth
-      && 64 - this.jumpHeight + playerHeight > 84) {
-      this.stop();
+    if (this.obstacles[0].isCoin) {
+      if (90 - coinWidth < firstOffset &&
+        firstOffset < 60 + playerWidth) {
+        if (this.obstacles[0].height === 84) {
+          if (64 - this.jumpHeight + playerHeight > 84) {
+            this.obstacles.shift();
+            this.grab();
+          }
+        } else {
+          if (80 - (this.jumpHeight + playerHeight) < this.obstacles[0].height) {
+            this.obstacles.shift();
+            this.grab();
+          }
+        }
+      }
+    } else if (90 - obstacleWidth < firstOffset
+      && firstOffset < 60 + playerWidth) {
+      if (this.obstacles[0].height === 84) {
+        if (64 - this.jumpHeight + playerHeight > 84) {
+          this.stop();
+        }
+      } else {
+        if (80 - (this.jumpHeight + playerHeight) < this.obstacles[0].height) {
+          this.stop();
+        }
+      }
     }
 
     ctx.restore();
@@ -226,10 +257,15 @@ export default class Game extends React.Component {
   __obstaclesGenerate() {
     let res = [];
     for (let i = 0; i < 10; ++i) {
-      let random = Math.floor(Math.random() * 100) % 60;
-      random = (Math.random() * 10 % 2 === 0 ? 1 : -1) * random;
+      let random = Math.floor(Math.random() * 100) % 70;
+      let bool = parseInt(Math.random() * 10) % 2;
+      let boolCoin = parseInt(Math.random() * 10) % 2;
+      random = (bool === 0 ? 1 : -1) * random;
+      console.log(this.options.playerImage[0].height);
       res.push({
-        distance: random + this.obstaclesBase * 200
+        distance: random + this.obstaclesBase * 200,
+        height: bool ? 84 : 64 - this.options.playerImage[0].height,
+        isCoin: boolCoin
       });
       ++this.obstaclesBase;
     }
@@ -290,6 +326,13 @@ stop = () => {
   this.__draw();
   this.__clear();
 };
+
+grab = () => {
+  if (this.status === STATUS.OVER) {
+    return;
+  }
+  this.gotPointsSound.play();
+}  
 
 restart = () => {
   this.obstacles = this.__obstaclesGenerate();
