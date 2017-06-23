@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { Howl } from 'howler';
 
 const STATUS = {
   STOP: 'STOP',
@@ -31,9 +32,17 @@ export default class Game extends React.Component {
     let playerLeftImage = new Image();
     let playerRightImage = new Image();
     let playerDieImage = new Image();
-    let obstacleImage = new Image();
-    let coinImage = new Image();
-    this.gotPointsSound = new Audio();
+    let lionImage = new Image();
+    let dogImage = new Image();
+    let deerImage = new Image();
+    let snakeImage = new Image();
+    // let treeImage = new Image();
+    // this.gotPointsSound = new Audio();
+    this.gotPointsSound = new Howl({
+      src: ['http://first.laughguru.com/assets/audio/Coin_sound.mp3']
+    });
+    this.soundId = null;
+    this.cycleCount = 0;
 
     skyImage.onload = onImageLoaded;
     groundImage.onload = onImageLoaded;
@@ -45,31 +54,37 @@ export default class Game extends React.Component {
     playerLeftImage.src = require('./img/dinosaur_left.png');
     playerRightImage.src = require('./img/dinosaur_right.png');
     playerDieImage.src = require('./img/dinosaur_die.png');
-    obstacleImage.src = require('./img/obstacle.png');
-    coinImage.src = require('./img/coin.png');
-    this.gotPointsSound.src = 'http://first.laughguru.com/assets/audio/Positive-Bingo.wav';
+    lionImage.src = require('./img/lion.png');
+    deerImage.src = require('./img/deer.png');
+    dogImage.src = require('./img/dog.png');
+    snakeImage.src = require('./img/snake.png');
+    // treeImage.src = require('./img/tree.png');
+    // this.gotPointsSound.src = require('./audio/Coin_sound.mp3');
 
     this.options = {
-      fps: this.props.settings.fps ? this.props.settings.fps : 120,
+      fps: 120,
       skySpeed: 40,
       groundSpeed: 200,
       minimum_distance: 600,
       skyImage: skyImage,
       groundImage: groundImage,
       playerImage: [playerImage, playerLeftImage, playerRightImage, playerDieImage],
-      obstacleImage: obstacleImage,
-      coinImage: coinImage,
+      mammalImage: [lionImage, deerImage, dogImage],
+      nonMammalImage: [snakeImage],
       skyOffset: 0,
       groundOffset: 0,
       acceleration: 50
     };
-    if (this.props.settings.acceleration) {
-      let acceleration = parseFloat(this.props.settings.acceleration, 10);
-      let accel = parseInt(50 / acceleration, 10);
-      let idealAcceleration = parseInt(parseFloat((120 / this.options.fps), 10) * 50, 10);
-      this.options.acceleration = accel < idealAcceleration ? accel : idealAcceleration;
-    } else {
-      this.options.acceleration = parseInt(parseFloat((120 / this.options.fps), 10) * 50, 10)
+    if (this.props.settings) {
+      this.options.fps = this.props.settings.fps ? this.props.settings.fps : 120;
+      if (this.props.settings.acceleration) {
+        let acceleration = parseFloat(this.props.settings.acceleration, 10);
+        let accel = parseInt(50 / acceleration, 10);
+        let idealAcceleration = parseInt(parseFloat((120 / this.options.fps), 10) * 50, 10);
+        this.options.acceleration = accel < idealAcceleration ? accel : idealAcceleration;
+      } else {
+        this.options.acceleration = parseInt(parseFloat((120 / this.options.fps), 10) * 50, 10)
+      }
     }
 
     this.styleCanvas = { width: this.props.width }
@@ -86,6 +101,8 @@ export default class Game extends React.Component {
     this.obstaclesBase = 1;
     this.currentDistance = 0;
     this.playerStatus = 0;
+    this.selectedMammals = [];
+    this.selectedNonMammal = null;
   }
 
   componentDidMount() {
@@ -135,6 +152,61 @@ export default class Game extends React.Component {
     window.onfocus = null;
   }
 
+  __drawObstacles(ctx, groundSpeed) {
+    // 障碍
+    const { width } = this.canvas;
+    let pop = 0;
+    for (let i = 0; i < this.obstacles.length; ++i) {
+      if (this.currentDistance >= this.obstacles[i].distance) {
+        let offset = width - (this.currentDistance - this.obstacles[i].distance + groundSpeed);
+        if (offset > 0) {
+          ctx.drawImage(this.obstacles[i].image, offset, this.obstacles[i].height);
+        } else {
+          ++pop;
+        }
+      } else {
+        break;
+      }
+    }
+    for (let i = 0; i < pop; i++) {
+      this.obstacles.shift();
+    }
+    if (this.obstacles.length < 5) {
+      this.obstacles = this.obstacles.concat(this.__obstaclesGenerate());
+    }
+  }
+
+  __hitObstacles(groundSpeed, playerWidth, playerHeight) {
+    // 碰撞检测
+    const { width } = this.canvas;
+    let firstOffset = width - (this.currentDistance - this.obstacles[0].distance + groundSpeed);
+    if (this.obstacles[0].isMammal) {
+      if (90 - this.obstacles[0].width < firstOffset &&
+        firstOffset < 60 + playerWidth) {
+        if (this.obstacles[0].height === 84) {
+          if (64 - this.jumpHeight + playerHeight > 84) {
+            this.grab(groundSpeed);
+          }
+        } else {
+          if (80 - (this.jumpHeight + playerHeight) < this.obstacles[0].height) {
+            this.grab(groundSpeed);
+          }
+        }
+      }
+    } else if (90 - this.obstacles[0].width < firstOffset &&
+      firstOffset < 60 + playerWidth) {
+      if (this.obstacles[0].height === 84) {
+        if (64 - this.jumpHeight + playerHeight > 84) {
+          this.stop();
+        }
+      } else {
+        if (80 - (this.jumpHeight + playerHeight) < this.obstacles[0].height) {
+          this.stop();
+        }
+      }
+    }
+  }
+
   __draw() {
     if (!this.canvas) {
       return;
@@ -143,8 +215,6 @@ export default class Game extends React.Component {
     let level = Math.min(200, Math.floor(this.score / options.acceleration));
     let groundSpeed = (options.groundSpeed + level) / options.fps;
     let skySpeed = options.skySpeed / options.fps;
-    let obstacleWidth = options.obstacleImage.width;
-    let coinWidth = options.coinImage.width;
     let playerWidth = options.playerImage[0].width;
     let playerHeight = options.playerImage[0].height;
 
@@ -200,7 +270,7 @@ export default class Game extends React.Component {
         window.localStorage['highScore'] = this.score;
       }
       this.currentDistance += groundSpeed;
-      if (this.score % 4 === 0) {
+      if (this.cycleCount % 8 === 0) {
         this.playerStatus = (this.playerStatus + 1) % 3;
       }
       if (this.jumpHeight > 0) {
@@ -213,59 +283,40 @@ export default class Game extends React.Component {
       ctx.fillText('Speed  ' + Math.floor(groundSpeed), 150, 23);
     }
 
-    // 障碍
-    // let pop = 0;
-    // for (let i = 0; i < this.obstacles.length; ++i) {
-    //   if (this.currentDistance >= this.obstacles[i].distance) {
-    //     let offset = width - (this.currentDistance - this.obstacles[i].distance + groundSpeed);
-    //     if (offset > 0) {
-    //       let image = this.obstacles[i].isCoin ? options.coinImage : options.obstacleImage;
-    //       ctx.drawImage(image, offset, this.obstacles[i].height);
-    //     }
-    //     else {
-    //       ++pop;
-    //     }
-    //   }
-    //   else {
-    //     break;
-    //   }
-    // }
-    // for (let i = 0; i < pop; i++) {
-    //   this.obstacles.shift();
-    // }
-    // if (this.obstacles.length < 5) {
-    //   this.obstacles = this.obstacles.concat(this.__obstaclesGenerate());
-    // }
+    this.__drawObstacles(ctx, groundSpeed);
 
-    // 碰撞检测
-    let firstOffset = width - (this.currentDistance - this.obstacles[0].distance + groundSpeed);
-    if (this.obstacles[0].isCoin) {
-      if (90 - coinWidth < firstOffset &&
-        firstOffset < 60 + playerWidth) {
-        if (this.obstacles[0].height === 84) {
-          if (64 - this.jumpHeight + playerHeight > 84) {
-            this.grab();
-          }
-        } else {
-          if (80 - (this.jumpHeight + playerHeight) < this.obstacles[0].height) {
-            this.grab();
-          }
-        }
-      }
-    } else if (90 - obstacleWidth < firstOffset
-      && firstOffset < 60 + playerWidth) {
-      if (this.obstacles[0].height === 84) {
-        if (64 - this.jumpHeight + playerHeight > 84) {
-          this.stop();
-        }
-      } else {
-        if (80 - (this.jumpHeight + playerHeight) < this.obstacles[0].height) {
-          this.stop();
-        }
-      }
-    }
+    this.__hitObstacles(groundSpeed, playerWidth, playerHeight);
 
+    this.cycleCount += 1;
     ctx.restore();
+  }
+
+  __setImageForObstacle(bool) {
+    let image = null;
+    let sameAndMany = () => {
+      if (bool) {
+        if (this.selectedMammals.length === 0) {
+          let random = parseInt(Math.random() * 10, 10) % 3
+          this.selectedMammals.push(this.options.mammalImage[random]);
+        }
+        let random = parseInt(Math.random() * 10, 10) % this.selectedMammals.length;
+        image = this.selectedMammals[random];
+      } else {
+        if (this.selectedNonMammal === null) {
+          let random = parseInt(Math.random() * 10, 10) % 2
+          this.selectedNonMammal = this.options.nonMammalImage[random];
+        }
+        image = this.selectedNonMammal;
+      }
+      return image;
+    };
+    let obj = {
+      sameAndMany: sameAndMany
+    }
+    if (this.props.type) {
+      return obj[this.props.type]();
+    }
+    return sameAndMany();
   }
 
   __obstaclesGenerate() {
@@ -273,12 +324,15 @@ export default class Game extends React.Component {
     for (let i = 0; i < 10; ++i) {
       let random = Math.floor(Math.random() * 100) % 60;
       let bool = parseInt(Math.random() * 10, 10) % 2;
-      let boolCoin = parseInt(Math.random() * 10, 10) % 2;
+      let boolMammal = parseInt(Math.random() * 10, 10) % 2;
+      let image = this.__setImageForObstacle(boolMammal);
       random = (bool === 0 ? 1 : -1) * random;
       res.push({
         distance: random + this.obstaclesBase * 200,
         height: bool ? 84 : 64 - this.options.playerImage[0].height,
-        isCoin: boolCoin
+        isMammal: boolMammal,
+        image: image,
+        width: image.width
       });
       ++this.obstaclesBase;
     }
@@ -340,12 +394,13 @@ export default class Game extends React.Component {
     this.__clear();
   };
 
-  grab = () => {
+  grab = (speed) => {
     if (this.status === STATUS.OVER) {
       return;
     }
-    this.score += 10;
-    this.gotPointsSound.play();
+    this.score += (50 * speed);
+    this.gotPointsSound.stop(this.soundId);
+    this.soundId = this.gotPointsSound.play();
     this.obstacles.shift();
   }  
 

@@ -14,7 +14,7 @@ class App extends Component {
         <p className="App-intro">
           To get started, edit <code>src/App.js</code> and save to reload.
         </p>
-        <Game settings={{ fps: 200, acceleration: 3 }} width={'80%'}/>
+        <Game type="sameAndMany" width={'70%'}/>
       </div>
     );
   }
