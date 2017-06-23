@@ -361,7 +361,7 @@ export default class Game extends React.Component {
 
   __setTimer() {
     this.timer = setInterval(() => this.__draw(), 1000 / this.options.fps);
-    this.levelUpTimer = setTimeout(() => this.__showLevelUp(), 10000);
+    this.levelUpTimer = setTimeout(() => this.__showLevelUp(), 20000);
   }
 
   __clearTimer() {
@@ -388,16 +388,19 @@ export default class Game extends React.Component {
     this.setState({
       showCanvas: false
     });
-    this.pause();
+    this.levelUpTimer = setTimeout(() => this.__showLevelUp(), 10000);
+    setTimeout(() => {
+      this.setState({
+        showCanvas: true
+      });
+    }, 2500); 
     this.level += 1;
-    console.log(Date.now(), this.level);
   }
 
   start = () => {
     if (this.status === STATUS.START) {
         return;
     }
-    console.log(Date.now());
     this.status = STATUS.START;
     this.__setTimer();
     this.jump();
@@ -458,12 +461,9 @@ export default class Game extends React.Component {
 
   render() {
     let play = this.state.showCanvas;
-    let opacity = {
-      opacity: play ? 1 : 0.5
-    }
     return ( 
       <div>
-        <canvas id="canvas" ref={ref => this.canvas = ref} height={160} width={680} style={{ ...this.styleCanvas, ...opacity }} />
+        <canvas id="canvas" ref={ref => this.canvas = ref} height={160} width={680} style={this.styleCanvas} />
         { !play ? (<h3>Level Up! Press Enter to continue</h3>) : null}
       </div>
     );
