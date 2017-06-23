@@ -103,6 +103,10 @@ export default class Game extends React.Component {
     this.playerStatus = 0;
     this.selectedMammals = [];
     this.selectedNonMammal = null;
+    this.level = 1;
+    this.state = {
+      showCanvas: true
+    };
   }
 
   componentDidMount() {
@@ -127,8 +131,16 @@ export default class Game extends React.Component {
     };
 
     const onEnterPress = () => {
-      this.stop();
-    }
+      switch (this.status) {
+        case 'PAUSE':
+          this.goOn();
+          break;
+        default:
+          console.log(this.status);
+          this.stop();
+          break;
+      }
+    };
 
     window.onkeydown = function (e) {
       if (e.key === ' ') {
@@ -214,6 +226,12 @@ export default class Game extends React.Component {
     const { options } = this;
     let level = Math.min(200, Math.floor(this.score / options.acceleration));
     let groundSpeed = (options.groundSpeed + level) / options.fps;
+    if (this.level < Math.floor(groundSpeed)) {
+      this.showLevelUp();
+      this.pause();
+      this.level = Math.floor(groundSpeed);
+      return;
+    } 
     let skySpeed = options.skySpeed / options.fps;
     let playerWidth = options.playerImage[0].width;
     let playerHeight = options.playerImage[0].height;
@@ -280,7 +298,7 @@ export default class Game extends React.Component {
     if (this.highScore) {
       ctx.textAlign = "left";
       ctx.fillText('HIGH  ' + Math.floor(this.highScore), 30, 23);
-      ctx.fillText('Speed  ' + Math.floor(groundSpeed), 150, 23);
+      ctx.fillText('Speed  ' + groundSpeed, 150, 23);
     }
 
     this.__drawObstacles(ctx, groundSpeed);
@@ -293,26 +311,36 @@ export default class Game extends React.Component {
 
   __setImageForObstacle(bool) {
     let image = null;
+    let that = this;
     let sameAndMany = () => {
       if (bool) {
-        if (this.selectedMammals.length === 0) {
-          let random = parseInt(Math.random() * 10, 10) % 3
-          this.selectedMammals.push(this.options.mammalImage[random]);
+        let level = that.level;
+        if (that.selectedMammals.length < level && that.selectedMammals.length < 3) {
+          let random = parseInt(Math.random() * 10, 10) % 3;
+          if (level > 1 && random === that.selectedMammals[0].index) {
+            return;
+          } else {
+            that.selectedMammals.push({
+              image: that.options.mammalImage[random],
+              index: random
+            });
+          }
         }
-        let random = parseInt(Math.random() * 10, 10) % this.selectedMammals.length;
-        image = this.selectedMammals[random];
+        let random = parseInt(Math.random() * 10, 10) % that.selectedMammals.length;
+        image = that.selectedMammals[random].image;
       } else {
-        if (this.selectedNonMammal === null) {
-          let random = parseInt(Math.random() * 10, 10) % 2
-          this.selectedNonMammal = this.options.nonMammalImage[random];
+        if (that.selectedNonMammal === null) {
+          let random = parseInt(Math.random() * 10, 10) % 1;
+          that.selectedNonMammal = that.options.nonMammalImage[random];
         }
-        image = this.selectedNonMammal;
+        image = that.selectedNonMammal;
       }
       return image;
     };
+
     let obj = {
       sameAndMany: sameAndMany
-    }
+    }    
     if (this.props.type) {
       return obj[this.props.type]();
     }
@@ -357,6 +385,7 @@ export default class Game extends React.Component {
     this.obstacles = [];
     this.obstaclesBase = 1;
     this.playerStatus = 0;
+    this.level = 1;
   }
 
   start = () => {
@@ -376,8 +405,19 @@ export default class Game extends React.Component {
     }
   };
 
+  showLevelUp = () => {
+    this.setState({
+      showCanvas: false
+    });
+  }
+
   goOn = () => {
     if (this.status === STATUS.PAUSE) {
+      if (!this.state.showCanvas) {
+        this.setState({
+          showCanvas: true
+        });
+      }
       this.status = STATUS.START;
       this.__setTimer();
     }
@@ -418,8 +458,11 @@ export default class Game extends React.Component {
   };
 
   render() {
-    return (
-      <canvas id="canvas" ref={ref => this.canvas = ref} height={160} style={this.styleCanvas} />
-    );
+    let element = <canvas id="canvas" ref={ref => this.canvas = ref} height={160} width={680} style={this.styleCanvas} />
+    if (this.state.showCanvas) {
+      return (element);
+    } else {
+      return (<h3>Level Up</h3>);
+    }
   }
 };
