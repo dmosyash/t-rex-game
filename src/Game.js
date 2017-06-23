@@ -136,7 +136,6 @@ export default class Game extends React.Component {
           this.goOn();
           break;
         default:
-          console.log(this.status);
           this.stop();
           break;
       }
@@ -226,12 +225,6 @@ export default class Game extends React.Component {
     const { options } = this;
     let level = Math.min(200, Math.floor(this.score / options.acceleration));
     let groundSpeed = (options.groundSpeed + level) / options.fps;
-    if (this.level < Math.floor(groundSpeed)) {
-      this.showLevelUp();
-      this.pause();
-      this.level = Math.floor(groundSpeed);
-      return;
-    } 
     let skySpeed = options.skySpeed / options.fps;
     let playerWidth = options.playerImage[0].width;
     let playerHeight = options.playerImage[0].height;
@@ -298,7 +291,7 @@ export default class Game extends React.Component {
     if (this.highScore) {
       ctx.textAlign = "left";
       ctx.fillText('HIGH  ' + Math.floor(this.highScore), 30, 23);
-      ctx.fillText('Speed  ' + groundSpeed, 150, 23);
+      ctx.fillText('Speed  ' + groundSpeed.toFixed(2), 150, 23);
     }
 
     this.__drawObstacles(ctx, groundSpeed);
@@ -315,10 +308,9 @@ export default class Game extends React.Component {
     let sameAndMany = () => {
       if (bool) {
         let level = that.level;
-        if (that.selectedMammals.length < level && that.selectedMammals.length < 3) {
+        if (that.selectedMammals.length < level && that.selectedMammals.length < 4) {
           let random = parseInt(Math.random() * 10, 10) % 3;
           if (level > 1 && random === that.selectedMammals[0].index) {
-            return;
           } else {
             that.selectedMammals.push({
               image: that.options.mammalImage[random],
@@ -369,11 +361,13 @@ export default class Game extends React.Component {
 
   __setTimer() {
     this.timer = setInterval(() => this.__draw(), 1000 / this.options.fps);
+    this.levelUpTimer = setTimeout(() => this.__showLevelUp(), 10000);
   }
 
   __clearTimer() {
     if (this.timer) {
       clearInterval(this.timer);
+      clearTimeout(this.levelUpTimer);
       this.timer = null;
     }
   }
@@ -386,13 +380,24 @@ export default class Game extends React.Component {
     this.obstaclesBase = 1;
     this.playerStatus = 0;
     this.level = 1;
+    this.selectedMammals = [];
+    this.selectedNonMammal = null;
+  }
+
+  __showLevelUp() {
+    this.setState({
+      showCanvas: false
+    });
+    this.pause();
+    this.level += 1;
+    console.log(Date.now(), this.level);
   }
 
   start = () => {
     if (this.status === STATUS.START) {
         return;
     }
-
+    console.log(Date.now());
     this.status = STATUS.START;
     this.__setTimer();
     this.jump();
@@ -404,12 +409,6 @@ export default class Game extends React.Component {
       this.__clearTimer();
     }
   };
-
-  showLevelUp = () => {
-    this.setState({
-      showCanvas: false
-    });
-  }
 
   goOn = () => {
     if (this.status === STATUS.PAUSE) {
@@ -458,11 +457,15 @@ export default class Game extends React.Component {
   };
 
   render() {
-    let element = <canvas id="canvas" ref={ref => this.canvas = ref} height={160} width={680} style={this.styleCanvas} />
-    if (this.state.showCanvas) {
-      return (element);
-    } else {
-      return (<h3>Level Up</h3>);
+    let play = this.state.showCanvas;
+    let opacity = {
+      opacity: play ? 1 : 0.5
     }
+    return ( 
+      <div>
+        <canvas id="canvas" ref={ref => this.canvas = ref} height={160} width={680} style={{ ...this.styleCanvas, ...opacity }} />
+        { !play ? (<h3>Level Up! Press Enter to continue</h3>) : null}
+      </div>
+    );
   }
 };
