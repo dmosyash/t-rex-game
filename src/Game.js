@@ -63,6 +63,11 @@ export default class Game extends React.Component {
 
     this.options = {
       fps: 120,
+      levelLimit: 3,
+      topSpeed: 3,
+      minimum_speed: 1.67,
+      totalTime: 120,
+      noOfPositive: 10,
       skySpeed: 40,
       groundSpeed: 200,
       minimum_distance: 600,
@@ -86,7 +91,7 @@ export default class Game extends React.Component {
         this.options.acceleration = parseInt(parseFloat((120 / this.options.fps), 10) * 50, 10)
       }
     }
-
+    this.totalPoints = this.options.noOfPositive * ((this.options.levelLimit + 1)*(this.options.levelLimit)/2);
     this.styleCanvas = { width: this.props.width }
 
     this.options.skySpeed = parseInt(this.options.fps / 3, 10);
@@ -108,6 +113,10 @@ export default class Game extends React.Component {
     this.state = {
       showCanvas: true
     };
+    this.speed = 1.67;
+    this.speedIncreaseRatePerSec = (this.options.topSpeed - this.options.minimum_speed) / this.options.totalTime;
+    this.levelUpAt = (this.options.topSpeed - this.options.minimum_speed) / this.options.levelLimit;
+    this.levelMinimumSpeed = this.speed;
   }
 
   componentDidMount() {
@@ -219,14 +228,24 @@ export default class Game extends React.Component {
     }
   }
 
+  __calculateLevel() {
+    let speed = this.speed.toFixed(2);
+    let minSpeed = this.levelMinimumSpeed.toFixed(2);
+    let levelUpAt = this.levelUpAt.toFixed(2);
+    let diff = parseFloat(speed - minSpeed).toFixed(2);
+    if(diff === levelUpAt) {
+      this.__showLevelUp();
+    }
+  }
+
   __draw() {
     if (!this.canvas) {
       return;
     }
     const { options } = this;
-    let level = Math.min(200, Math.floor(this.score / options.acceleration));
-    let groundSpeed = (options.groundSpeed + level) / options.fps;
-    let skySpeed = options.skySpeed / options.fps;
+    this.speed += this.speedIncreaseRatePerSec / options.fps;
+    this.__calculateLevel();
+    let skySpeed = (options.skySpeed + this.speed) / options.fps;
     let playerWidth = options.playerImage[0].width;
     let playerHeight = options.playerImage[0].height;
 
@@ -246,7 +265,7 @@ export default class Game extends React.Component {
 
     // 地面 -- ground 
     this.options.groundOffset = this.options.groundOffset < width
-      ? (this.options.groundOffset + groundSpeed)
+      ? (this.options.groundOffset + this.speed)
       : (this.options.groundOffset - width);
     ctx.translate(this.options.skyOffset-this.options.groundOffset, 0);
     ctx.drawImage(this.options.groundImage, 0, 76);
@@ -281,7 +300,7 @@ export default class Game extends React.Component {
         this.highScore = this.score;
         window.localStorage['highScore'] = this.score;
       }
-      this.currentDistance += groundSpeed;
+      this.currentDistance += this.speed;
       if (this.cycleCount % 8 === 0) {
         this.playerStatus = (this.playerStatus + 1) % 3;
       }
@@ -292,13 +311,13 @@ export default class Game extends React.Component {
     if (this.highScore) {
       ctx.textAlign = "left";
       ctx.fillText('HIGH  ' + Math.floor(this.highScore), 30, 23);
-      ctx.fillText('Speed  ' + groundSpeed.toFixed(2), 150, 23);
+      ctx.fillText('Speed  ' + this.speed.toFixed(2), 150, 23);
       ctx.fillText('Level  ' + this.level, 270, 23);
     }
 
-    this.__drawObstacles(ctx, groundSpeed);
+    this.__drawObstacles(ctx, this.speed);
 
-    this.__hitObstacles(groundSpeed, playerWidth, playerHeight);
+    this.__hitObstacles(this.speed, playerWidth, playerHeight);
     this.getLegends();
 
     this.cycleCount += 1;
@@ -433,7 +452,6 @@ export default class Game extends React.Component {
 
   __setTimer() {
     this.timer = setInterval(() => this.__draw(), 1000 / this.options.fps);
-    this.levelUpTimer = setTimeout(() => this.__showLevelUp(), 20000);
   }
 
   __clearTimer() {
@@ -457,18 +475,16 @@ export default class Game extends React.Component {
   }
 
   __showLevelUp() {
-    setTimeout(() => {
-      this.setState({
-        showCanvas: false
-      });
-    }, 300);
-    this.levelUpTimer = setTimeout(() => this.__showLevelUp(), 10000);
+    this.setState({
+      showCanvas: false
+    });
     setTimeout(() => {
       this.setState({
         showCanvas: true
       });
     }, 2500); 
     this.level += 1;
+    this.levelMinimumSpeed += this.levelUpAt;
     this.isLevelUp = true;
     this.isLevelUpMammals = true;
   }
@@ -517,6 +533,7 @@ export default class Game extends React.Component {
       return;
     }
     this.score += (50 * speed);
+    this.speed += (this.level * this.speedIncreaseRatePerSec) / this.totalPoints;
     this.gotPointsSound.stop(this.soundId);
     this.soundId = this.gotPointsSound.play();
     this.obstacles.shift();
