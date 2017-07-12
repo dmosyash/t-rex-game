@@ -95,7 +95,6 @@ export default class Game extends React.Component {
     this.styleCanvas = { width: this.props.width }
 
     this.options.skySpeed = parseInt(this.options.fps / 3, 10);
-    this.options.groundSpeed = parseInt((this.options.fps * 10) / 6, 10);
 
     this.status = STATUS.STOP;
     this.timer = null;
@@ -332,17 +331,23 @@ export default class Game extends React.Component {
         let level = that.level;
         if (that.selectedMammals.length < level && that.selectedMammals.length < 4) {
           let random = parseInt(Math.random() * 10, 10) % 3;
-          if (level > 1 && random === that.selectedMammals[0].index) {
-          } else {
-            let obj = {
-              image: that.options.mammalImage[random].image,
-              name: that.options.mammalImage[random].name,
-              index: random
-            };
-            that.selectedMammals.push(obj);
-            that.animals.push(obj);
-            that.newAnimal = that.options.mammalImage[random].name;
+          if (level > 1) {
+            for(let i=0;i<that.selectedMammals.length; i++) {
+              if(random === that.selectedMammals[i].index) {
+                random = parseInt(Math.random() * 10, 10) % 3;
+                i = -1;
+                continue;
+              }
+            }
           }
+          let obj = {
+            image: that.options.mammalImage[random].image,
+            name: that.options.mammalImage[random].name,
+            index: random
+          };
+          that.selectedMammals.push(obj);
+          that.animals.push(obj);
+          that.newAnimal = that.options.mammalImage[random].name;
         }
         let random = parseInt(Math.random() * 10, 10) % that.selectedMammals.length;
         image = that.selectedMammals[random].image;
@@ -432,7 +437,7 @@ export default class Game extends React.Component {
 
   __obstaclesGenerate() {
     let res = [];
-    for (let i = 0; i < 4; ++i) {
+    for (let i = 0; i < (this.level+1); ++i) {
       let random = Math.floor(Math.random() * 100) % 60;
       let bool = parseInt(Math.random() * 10, 10) % 2;
       let boolMammal = parseInt(Math.random() * 10, 10) % 2;
@@ -541,6 +546,8 @@ export default class Game extends React.Component {
 
   restart = () => {
     this.obstacles = this.__obstaclesGenerate();
+    this.speed = this.options.minimum_speed;
+    this.levelMinimumSpeed = this.speed;
     this.animals = [];
     this.selectedMammals = [];
     this.selectedNonMammal = null;
@@ -577,11 +584,11 @@ export default class Game extends React.Component {
     return ( 
       <div>
         <canvas id="canvas" ref={ref => this.canvas = ref} height={160} width={680} style={this.styleCanvas} />
-        { !play ? (<h3>Level Up! Introducing a new animal</h3>) : null}
+        { !play ? (<h3>Level Up! Introducing a new animal</h3>) : '' }
         <div>
           <canvas id="legends" ref={ref => this.legendCanvas = ref} height={160} width={600} />
         </div>
-        <h3> Eat all Mammals </h3>
+        <h3> Eat all the Mammals </h3>
       </div>
     );
   }
