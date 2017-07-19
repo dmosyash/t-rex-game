@@ -583,12 +583,11 @@ export default class Game extends React.Component {
     let play = this.state.showCanvas;
     return ( 
       <div>
-        <canvas id="canvas" ref={ref => this.canvas = ref} height={160} width={680} style={this.styleCanvas} />
-        { !play ? (<h3>Level Up! Introducing a new animal</h3>) : '' }
+        <div className="level-up">{ !play ? (<span>Level Up! Introducing a new animal</span>) : '' }</div>
         <div>
-          <canvas id="legends" ref={ref => this.legendCanvas = ref} height={160} width={600} />
+          <canvas id="legends" ref={ref => this.legendCanvas = ref} height={70} width={600} />
         </div>
-        <h3> Eat all the Mammals </h3>
+        <canvas id="canvas" ref={ref => this.canvas = ref} height={160} width={680} style={this.styleCanvas} />
       </div>
     );
   }
