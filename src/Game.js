@@ -579,6 +579,23 @@ export default class Game extends React.Component {
     });
   };
 
+  fullScreen() {
+    console.log(this.canvas);
+    if (this.canvas.requestFullscreen) {
+      this.canvas.requestFullscreen();
+    } else if (this.canvas.msRequestFullscreen) {
+      this.canvas.msRequestFullscreen();
+    } else if (this.canvas.mozRequestFullScreen) {
+      this.canvas.mozRequestFullScreen();
+    } else if (this.canvas.webkitRequestFullscreen) {
+      this.canvas.webkitRequestFullscreen();
+    }
+    window.screen.orientation.lock('landscape').then(null, function(error) {
+      alert(error);
+      // document.exitFullscreen()
+    });
+  }
+
   render() {
     let play = this.state.showCanvas;
     return ( 
@@ -588,6 +605,7 @@ export default class Game extends React.Component {
           <canvas id="legends" ref={ref => this.legendCanvas = ref} height={70} width={600} />
         </div>
         <canvas id="canvas" ref={ref => this.canvas = ref} height={160} width={680} style={this.styleCanvas} />
+              <button type="button" onClick={() => this.fullScreen()}>Fullscreen</button>
       </div>
     );
   }
