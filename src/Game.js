@@ -19,7 +19,7 @@ export default class Game extends React.Component {
     let onImageLoaded = () => {
       ++imageLoadCount;
       if (imageLoadCount === 3) {
-        this.obstacles = this.__obstaclesGenerate();
+        this.obstacles = this.__obstaclesGenerate(10);
         this.__draw();
       }
     };
@@ -65,7 +65,7 @@ export default class Game extends React.Component {
       levelLimit: 3,
       topSpeed: 3,
       minimum_speed: 1.67,
-      totalTime: 120,
+      totalTime: 60,
       noOfPositive: 10,
       skySpeed: 40,
       groundSpeed: 200,
@@ -233,7 +233,7 @@ export default class Game extends React.Component {
     let minSpeed = this.levelMinimumSpeed.toFixed(2);
     let levelUpAt = this.levelUpAt.toFixed(2);
     let diff = parseFloat(speed - minSpeed).toFixed(2);
-    if(diff === levelUpAt) {
+    if(diff === levelUpAt && this.level < this.options.levelLimit) {
       this.__doLevelUp();
     }
   }
@@ -244,6 +244,7 @@ export default class Game extends React.Component {
     }
     const { options } = this;
     this.speed += this.speedIncreaseRatePerSec / options.fps;
+    this.speed = this.speed <= options.topSpeed ? this.speed : options.topSpeed;
     this.__calculateLevel();
     let skySpeed = (options.skySpeed + this.speed) / options.fps;
     let playerWidth = options.playerImage[0].width;
@@ -293,7 +294,7 @@ export default class Game extends React.Component {
     ctx.font = "Bold 18px Arial";
     ctx.textAlign = "right";
     ctx.fillStyle = "#595959";
-    ctx.fillText(scoreText, width - 20, 150);
+    ctx.fillText(scoreText, width, 150);
     if (this.status === STATUS.START) {
       this.score += 0.5;
       if (this.score > this.highScore) {
@@ -313,7 +314,7 @@ export default class Game extends React.Component {
       ctx.fillText('HIGH  ' + Math.floor(this.highScore), 0, 150);
       ctx.fillText('Speed  ' + this.speed.toFixed(2), 120, 150);
       ctx.fillText('Level  ' + this.level, 240, 150);
-      ctx.fillText('Time  ' + parseInt(this.cycleCount / this.options.fps), 320, 150);
+      ctx.fillText('Time  ' + parseInt(this.cycleCount / this.options.fps, 10), 320, 150);
       ctx.fillText('Eaten  ' + this.eaten, 400, 150);
     }
 
@@ -331,14 +332,14 @@ export default class Game extends React.Component {
     let sameAndMany = () => {
       if (bool) {
         let level = that.level;
-        if (that.selectedMammals.length < level && that.selectedMammals.length < 4) {
+        let len = that.selectedMammals.length;
+        if (len < level && level < that.options.levelLimit && len <= that.options.mammalImage.length) {
           let random = parseInt(Math.random() * 10, 10) % 3;
           if (level > 1) {
             for(let i=0;i<that.selectedMammals.length; i++) {
               if(random === that.selectedMammals[i].index) {
                 random = parseInt(Math.random() * 10, 10) % 3;
                 i = -1;
-                continue;
               }
             }
           }
@@ -368,15 +369,16 @@ export default class Game extends React.Component {
 
     let oneAndMany = () => {
       let level = that.level;
+      let loopCount = 0;
       if (bool) {
-        if (that.selectedMammals.length < level && that.selectedMammals.length < 4) {
+        let len = that.selectedMammals.length;
+        if (len < level && level < that.options.levelLimit && len <= that.options.mammalImage.length) {
           let random = parseInt(Math.random() * 10, 10) % 3;
           if (level > 1) {
             for (let i = 0; i < that.selectedMammals.length; i++) {
               if (random === that.selectedMammals[i].index) {
                 random = parseInt(Math.random() * 10, 10) % 3;
                 i = -1;
-                continue;
               }
             }
           }
@@ -400,20 +402,25 @@ export default class Game extends React.Component {
               if (random === that.usedNonMammals[i].index) {
                 random = parseInt(Math.random() * 10, 10) % 3;
                 i = -1;
-                continue;
+                if (loopCount < 4) {
+                  loopCount += 1;
+                  continue;
+                }
               }
             }
           }
-          let obj = {
-            image: that.options.nonMammalImage[random].image,
-            name: that.options.nonMammalImage[random].name,
-            index: random
-          };
-          that.selectedNonMammal = obj;
-          that.usedNonMammals.push(obj);
-          that.animals.push(obj);
-          that.isLevelUp = false;
-          this.getLegends();
+          if (loopCount < 4) {
+            let obj = {
+              image: that.options.nonMammalImage[random].image,
+              name: that.options.nonMammalImage[random].name,
+              index: random
+            };
+            that.selectedNonMammal = obj;
+            that.usedNonMammals.push(obj);
+            that.animals.push(obj);
+            that.isLevelUp = false;
+            this.getLegends();
+          }
         }
         image = that.selectedNonMammal.image;
       }
@@ -423,7 +430,8 @@ export default class Game extends React.Component {
     let oneAndOne = () => {
       let level = that.level;
       if (bool) {
-        if (that.selectedMammals.length < level && that.selectedMammals.length < 4) {
+        let len = that.selectedMammals.length;
+        if (len < level && level < that.options.levelLimit && len <= that.options.mammalImage.length) {
           let random = parseInt(Math.random() * 10, 10) % 3;
           if (level > 1) {
             for (let i = 0; i < that.selectedMammals.length; i++) {
@@ -484,9 +492,10 @@ export default class Game extends React.Component {
     return sameAndMany();
   }
 
-  __obstaclesGenerate() {
+  __obstaclesGenerate(count) {
     let res = [];
-    for (let i = 0; i < (this.level+1); ++i) {
+    let limit = count ? count : this.level + 1;
+    for (let i = 0; i < limit; ++i) {
       let random = Math.floor(Math.random() * 100) % 60;
       let bool = parseInt(Math.random() * 10, 10) % 2;
       let boolMammal = parseInt(Math.random() * 10, 10) % 2;
