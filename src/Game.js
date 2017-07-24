@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Howl } from 'howler';
 
@@ -106,6 +105,7 @@ export default class Game extends React.Component {
     this.currentDistance = 0;
     this.playerStatus = 0;
     this.selectedMammals = [];
+    this.usedNonMammals = [];
     this.selectedNonMammal = null;
     this.level = 1;
     this.animals = [];
@@ -113,6 +113,7 @@ export default class Game extends React.Component {
       showCanvas: true
     };
     this.speed = 1.67;
+    this.eaten = 0;
     this.speedIncreaseRatePerSec = (this.options.topSpeed - this.options.minimum_speed) / this.options.totalTime;
     this.levelUpAt = (this.options.topSpeed - this.options.minimum_speed) / this.options.levelLimit;
     this.levelMinimumSpeed = this.speed;
@@ -292,7 +293,7 @@ export default class Game extends React.Component {
     ctx.font = "Bold 18px Arial";
     ctx.textAlign = "right";
     ctx.fillStyle = "#595959";
-    ctx.fillText(scoreText, width - 30, 23);
+    ctx.fillText(scoreText, width - 20, 150);
     if (this.status === STATUS.START) {
       this.score += 0.5;
       if (this.score > this.highScore) {
@@ -309,15 +310,16 @@ export default class Game extends React.Component {
     }
     if (this.highScore) {
       ctx.textAlign = "left";
-      ctx.fillText('HIGH  ' + Math.floor(this.highScore), 30, 23);
-      ctx.fillText('Speed  ' + this.speed.toFixed(2), 150, 23);
-      ctx.fillText('Level  ' + this.level, 270, 23);
+      ctx.fillText('HIGH  ' + Math.floor(this.highScore), 0, 150);
+      ctx.fillText('Speed  ' + this.speed.toFixed(2), 120, 150);
+      ctx.fillText('Level  ' + this.level, 240, 150);
+      ctx.fillText('Time  ' + parseInt(this.cycleCount / this.options.fps), 320, 150);
+      ctx.fillText('Eaten  ' + this.eaten, 400, 150);
     }
 
     this.__drawObstacles(ctx, this.speed);
 
     this.__hitObstacles(this.speed, playerWidth, playerHeight);
-    // this.getLegends();
 
     this.cycleCount += 1;
     ctx.restore();
@@ -365,30 +367,53 @@ export default class Game extends React.Component {
     };
 
     let oneAndMany = () => {
+      let level = that.level;
       if (bool) {
-        let level = that.level;
         if (that.selectedMammals.length < level && that.selectedMammals.length < 4) {
           let random = parseInt(Math.random() * 10, 10) % 3;
-          if (level > 1 && random === that.selectedMammals[0].index) {
-          } else {
-            let obj = {
-              image: that.options.mammalImage[random].image,
-              name: that.options.mammalImage[random].name,
-              index: random
-            };
-            that.selectedMammals.push(obj);
-            that.animals.push(obj);
-            that.newAnimal = that.options.mammalImage[random].name;
+          if (level > 1) {
+            for (let i = 0; i < that.selectedMammals.length; i++) {
+              if (random === that.selectedMammals[i].index) {
+                random = parseInt(Math.random() * 10, 10) % 3;
+                i = -1;
+                continue;
+              }
+            }
           }
+          let obj = {
+            image: that.options.mammalImage[random].image,
+            name: that.options.mammalImage[random].name,
+            index: random
+          };
+          that.selectedMammals.push(obj);
+          that.animals.push(obj);
+          that.newAnimal = obj.name;
+          this.__showLevelUp();
         }
         let random = parseInt(Math.random() * 10, 10) % that.selectedMammals.length;
         image = that.selectedMammals[random].image;
       } else {
         if (that.selectedNonMammal === null || that.isLevelUp) {
           let random = parseInt(Math.random() * 10, 10) % 1;
-          that.selectedNonMammal = that.options.nonMammalImage[random];
-          that.animals.push(that.selectedNonMammal);
+          if (level > 1) {
+            for (let i = 0; i < that.usedNonMammals.length; i++) {
+              if (random === that.usedNonMammals[i].index) {
+                random = parseInt(Math.random() * 10, 10) % 3;
+                i = -1;
+                continue;
+              }
+            }
+          }
+          let obj = {
+            image: that.options.nonMammalImage[random].image,
+            name: that.options.nonMammalImage[random].name,
+            index: random
+          };
+          that.selectedNonMammal = obj;
+          that.usedNonMammals.push(obj);
+          that.animals.push(obj);
           that.isLevelUp = false;
+          this.getLegends();
         }
         image = that.selectedNonMammal.image;
       }
@@ -396,32 +421,52 @@ export default class Game extends React.Component {
     }
 
     let oneAndOne = () => {
+      let level = that.level;
       if (bool) {
-        let level = that.level;
         if (that.selectedMammals.length < level && that.selectedMammals.length < 4) {
           let random = parseInt(Math.random() * 10, 10) % 3;
-          if (level > 1 && random === that.selectedMammals[0].index) {
-          } else if(that.isLevelUpMammals){
-            let obj = {
-              image: that.options.mammalImage[random].image,
-              name: that.options.mammalImage[random].name,
-              index: random
-            };
-            that.selectedMammals = [];
-            that.selectedMammals.push(obj);
-            that.animals.push(obj);
-            that.newAnimal = that.options.mammalImage[random].name;
-            that.isLevelUpMammals = false;
+          if (level > 1) {
+            for (let i = 0; i < that.selectedMammals.length; i++) {
+              if (random === that.selectedMammals[i].index) {
+                random = parseInt(Math.random() * 10, 10) % 3;
+                i = -1;
+                continue;
+              }
+            }
           }
+          let obj = {
+            image: that.options.mammalImage[random].image,
+            name: that.options.mammalImage[random].name,
+            index: random
+          };
+          that.selectedMammals.push(obj);
+          that.animals.push(obj);
+          that.newAnimal = obj.name;
+          this.__showLevelUp();
         }
-        let random = parseInt(Math.random() * 10, 10) % that.selectedMammals.length;
-        image = that.selectedMammals[random].image;
+        image = that.selectedMammals[that.selectedMammals.length-1].image;
       } else {
         if (that.selectedNonMammal === null || that.isLevelUp) {
           let random = parseInt(Math.random() * 10, 10) % 1;
-          that.selectedNonMammal = that.options.nonMammalImage[random];
-          that.animals.push(that.selectedNonMammal);
+          if (level > 1) {
+            for (let i = 0; i < that.usedNonMammals.length; i++) {
+              if (random === that.usedNonMammals[i].index) {
+                random = parseInt(Math.random() * 10, 10) % 3;
+                i = -1;
+                continue;
+              }
+            }
+          }
+          let obj = {
+            image: that.options.nonMammalImage[random].image,
+            name: that.options.nonMammalImage[random].name,
+            index: random
+          };
+          that.selectedNonMammal = obj;
+          that.usedNonMammals.push(obj);
+          that.animals.push(obj);
           that.isLevelUp = false;
+          this.getLegends();
         }
         image = that.selectedNonMammal.image;
       }
@@ -429,7 +474,9 @@ export default class Game extends React.Component {
     }
 
     let obj = {
-      sameAndMany: sameAndMany
+      sameAndMany: sameAndMany,
+      oneAndOne: oneAndOne,
+      oneAndMany: oneAndMany
     }    
     if (this.props.type) {
       return obj[this.props.type]();
@@ -542,6 +589,7 @@ export default class Game extends React.Component {
     }
     this.score += (50 * speed);
     this.speed += (this.level * this.speedIncreaseRatePerSec) / this.totalPoints;
+    this.eaten += 1;
     this.gotPointsSound.stop(this.soundId);
     this.soundId = this.gotPointsSound.play();
     this.obstacles.shift();
