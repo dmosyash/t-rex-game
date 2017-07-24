@@ -233,7 +233,7 @@ export default class Game extends React.Component {
     let levelUpAt = this.levelUpAt.toFixed(2);
     let diff = parseFloat(speed - minSpeed).toFixed(2);
     if(diff === levelUpAt) {
-      this.__showLevelUp();
+      this.__doLevelUp();
     }
   }
 
@@ -317,13 +317,13 @@ export default class Game extends React.Component {
     this.__drawObstacles(ctx, this.speed);
 
     this.__hitObstacles(this.speed, playerWidth, playerHeight);
-    this.getLegends();
+    // this.getLegends();
 
     this.cycleCount += 1;
     ctx.restore();
   }
 
-  __setImageForObstacle(bool) {
+  __setImageForObstacle(bool, now) {
     let image = null;
     let that = this;
     let sameAndMany = () => {
@@ -347,7 +347,8 @@ export default class Game extends React.Component {
           };
           that.selectedMammals.push(obj);
           that.animals.push(obj);
-          that.newAnimal = that.options.mammalImage[random].name;
+          that.newAnimal = obj.name;
+          this.__showLevelUp();
         }
         let random = parseInt(Math.random() * 10, 10) % that.selectedMammals.length;
         image = that.selectedMammals[random].image;
@@ -356,6 +357,7 @@ export default class Game extends React.Component {
           let random = parseInt(Math.random() * 10, 10) % 1;
           that.selectedNonMammal = that.options.nonMammalImage[random];
           that.animals.push(that.selectedNonMammal);
+          this.getLegends();
         }
         image = that.selectedNonMammal.image;
       }
@@ -441,7 +443,7 @@ export default class Game extends React.Component {
       let random = Math.floor(Math.random() * 100) % 60;
       let bool = parseInt(Math.random() * 10, 10) % 2;
       let boolMammal = parseInt(Math.random() * 10, 10) % 2;
-      let image = this.__setImageForObstacle(boolMammal);
+      let image = this.__setImageForObstacle(boolMammal, performance.now());
       random = (bool === 0 ? 1 : -1) * random;
       res.push({
         distance: random + this.obstaclesBase * 200,
@@ -479,19 +481,20 @@ export default class Game extends React.Component {
     this.selectedNonMammal = null;
   }
 
-  __showLevelUp() {
-    this.setState({
-      showCanvas: false
-    });
-    setTimeout(() => {
-      this.setState({
-        showCanvas: true
-      });
-    }, 2500); 
+  __doLevelUp() {
     this.level += 1;
+    this.obstacles = this.obstacles.concat(this.__obstaclesGenerate());
     this.levelMinimumSpeed += this.levelUpAt;
     this.isLevelUp = true;
     this.isLevelUpMammals = true;
+  }
+
+  __showLevelUp() {
+    this.setState({
+      showCanvas: false,
+      level: this.level
+    });
+    this.getLegends();
   }
 
   start = () => {
@@ -545,12 +548,13 @@ export default class Game extends React.Component {
   }  
 
   restart = () => {
-    this.obstacles = this.__obstaclesGenerate();
-    this.speed = this.options.minimum_speed;
-    this.levelMinimumSpeed = this.speed;
+    this.newAnimal = null;
     this.animals = [];
     this.selectedMammals = [];
     this.selectedNonMammal = null;
+    this.obstacles = this.__obstaclesGenerate();
+    this.speed = this.options.minimum_speed;
+    this.levelMinimumSpeed = this.speed;
     this.start();
   };
 
@@ -575,37 +579,19 @@ export default class Game extends React.Component {
       let offset = (i * 120) + 10;
       ctx.drawImage(v.image, offset, 0);
       ctx.fillText(v.name, offset + v.image.width + 10, 20);
-      return;
+      return 1;
     });
   };
 
-  fullScreen() {
-    console.log(this.canvas);
-    if (this.canvas.requestFullscreen) {
-      this.canvas.requestFullscreen();
-    } else if (this.canvas.msRequestFullscreen) {
-      this.canvas.msRequestFullscreen();
-    } else if (this.canvas.mozRequestFullScreen) {
-      this.canvas.mozRequestFullScreen();
-    } else if (this.canvas.webkitRequestFullscreen) {
-      this.canvas.webkitRequestFullscreen();
-    }
-    window.screen.orientation.lock('landscape').then(null, function(error) {
-      alert(error);
-      // document.exitFullscreen()
-    });
-  }
-
   render() {
-    let play = this.state.showCanvas;
+    let level = this.state.level;
     return ( 
       <div>
-        <div className="level-up">{ !play ? (<span>Level Up! Introducing a new animal</span>) : '' }</div>
+        <div className="level-up">{level > 1 ? (<span>Level Up! Introducing a new animal {this.newAnimal}</span>) : <span>Collect all Mammals</span>}</div>
         <div>
           <canvas id="legends" ref={ref => this.legendCanvas = ref} height={70} width={600} />
         </div>
         <canvas id="canvas" ref={ref => this.canvas = ref} height={160} width={680} style={this.styleCanvas} />
-              <button type="button" onClick={() => this.fullScreen()}>Fullscreen</button>
       </div>
     );
   }
