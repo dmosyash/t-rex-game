@@ -25,7 +25,6 @@ class App extends Component {
             <Route path='tough' component={Toughest} />
           </Route>
         </Router>
-        {/* <Game type="sameAndMany" width={'70%'}/> */}
       </div>
     );
   }

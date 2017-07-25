@@ -94,6 +94,7 @@ export default class Game extends React.Component {
     this.styleCanvas = { width: this.props.width }
 
     this.options.skySpeed = parseInt(this.options.fps / 3, 10);
+    this.options.totalTime += parseInt(this.options.levelLimit * 1.5, 10);
 
     this.status = STATUS.STOP;
     this.timer = null;
@@ -174,7 +175,6 @@ export default class Game extends React.Component {
   }
 
   __drawObstacles(ctx, groundSpeed) {
-    // 障碍
     const { width } = this.canvas;
     let pop = 0;
     for (let i = 0; i < this.obstacles.length; ++i) {
@@ -198,7 +198,9 @@ export default class Game extends React.Component {
   }
 
   __hitObstacles(groundSpeed, playerWidth, playerHeight) {
-    // 碰撞检测
+    if (this.obstacles.length === 0) {
+      return;
+    }
     const { width } = this.canvas;
     let firstOffset = width - (this.currentDistance - this.obstacles[0].distance + groundSpeed);
     if (this.obstacles[0].isMammal) {
@@ -233,8 +235,13 @@ export default class Game extends React.Component {
     let minSpeed = this.levelMinimumSpeed.toFixed(2);
     let levelUpAt = this.levelUpAt.toFixed(2);
     let diff = parseFloat(speed - minSpeed).toFixed(2);
-    if(diff === levelUpAt && this.level < this.options.levelLimit) {
-      this.__doLevelUp();
+    if (diff === levelUpAt) {
+      if (this.level < this.options.levelLimit) {
+        this.__doLevelUp();
+      } else {
+        this.gameCompleted = true;
+        this.__showLevelUp();
+      }
     }
   }
 
@@ -243,7 +250,9 @@ export default class Game extends React.Component {
       return;
     }
     const { options } = this;
-    this.speed += this.speedIncreaseRatePerSec / options.fps;
+    if (!this.isLevelUp) {
+      this.speed += this.speedIncreaseRatePerSec / options.fps;
+    }
     this.speed = this.speed <= options.topSpeed ? this.speed : options.topSpeed;
     this.__calculateLevel();
     let skySpeed = (options.skySpeed + this.speed) / options.fps;
@@ -318,7 +327,16 @@ export default class Game extends React.Component {
       ctx.fillText('Eaten  ' + this.eaten, 400, 150);
     }
 
-    this.__drawObstacles(ctx, this.speed);
+    if (!this.isLevelUp) {
+      this.__drawObstacles(ctx, this.speed);
+    } else {
+      if (!this.gameCompleted) {
+        ctx.fillText('Level Up! ' + this.level + ' Introducing a new animal ' + this.newAnimal, 170, 70);
+      } else {
+        ctx.fillText('Congratulations! You have successfully identified all mammals', 170, 70);
+      }
+      this.obstacles = [];
+    }
 
     this.__hitObstacles(this.speed, playerWidth, playerHeight);
 
@@ -333,7 +351,7 @@ export default class Game extends React.Component {
       if (bool) {
         let level = that.level;
         let len = that.selectedMammals.length;
-        if (len < level && level < that.options.levelLimit && len <= that.options.mammalImage.length) {
+        if (len < level && level <= that.options.levelLimit && len <= that.options.mammalImage.length) {
           let random = parseInt(Math.random() * 10, 10) % 3;
           if (level > 1) {
             for(let i=0;i<that.selectedMammals.length; i++) {
@@ -351,7 +369,7 @@ export default class Game extends React.Component {
           that.selectedMammals.push(obj);
           that.animals.push(obj);
           that.newAnimal = obj.name;
-          this.__showLevelUp();
+          this.getLegends();
         }
         let random = parseInt(Math.random() * 10, 10) % that.selectedMammals.length;
         image = that.selectedMammals[random].image;
@@ -372,7 +390,7 @@ export default class Game extends React.Component {
       let loopCount = 0;
       if (bool) {
         let len = that.selectedMammals.length;
-        if (len < level && level < that.options.levelLimit && len <= that.options.mammalImage.length) {
+        if (len < level && level <= that.options.levelLimit && len <= that.options.mammalImage.length) {
           let random = parseInt(Math.random() * 10, 10) % 3;
           if (level > 1) {
             for (let i = 0; i < that.selectedMammals.length; i++) {
@@ -390,12 +408,12 @@ export default class Game extends React.Component {
           that.selectedMammals.push(obj);
           that.animals.push(obj);
           that.newAnimal = obj.name;
-          this.__showLevelUp();
+          this.getLegends();
         }
         let random = parseInt(Math.random() * 10, 10) % that.selectedMammals.length;
         image = that.selectedMammals[random].image;
       } else {
-        if (that.selectedNonMammal === null || that.isLevelUp) {
+        if (that.selectedNonMammal === null || that.isLevelUpNonMammals) {
           let random = parseInt(Math.random() * 10, 10) % 1;
           if (level > 1) {
             for (let i = 0; i < that.usedNonMammals.length; i++) {
@@ -418,7 +436,7 @@ export default class Game extends React.Component {
             that.selectedNonMammal = obj;
             that.usedNonMammals.push(obj);
             that.animals.push(obj);
-            that.isLevelUp = false;
+            that.isLevelUpNonMammals = false;
             this.getLegends();
           }
         }
@@ -431,7 +449,7 @@ export default class Game extends React.Component {
       let level = that.level;
       if (bool) {
         let len = that.selectedMammals.length;
-        if (len < level && level < that.options.levelLimit && len <= that.options.mammalImage.length) {
+        if (len < level && level <= that.options.levelLimit && len <= that.options.mammalImage.length) {
           let random = parseInt(Math.random() * 10, 10) % 3;
           if (level > 1) {
             for (let i = 0; i < that.selectedMammals.length; i++) {
@@ -450,11 +468,11 @@ export default class Game extends React.Component {
           that.selectedMammals.push(obj);
           that.animals.push(obj);
           that.newAnimal = obj.name;
-          this.__showLevelUp();
+          this.getLegends();
         }
         image = that.selectedMammals[that.selectedMammals.length-1].image;
       } else {
-        if (that.selectedNonMammal === null || that.isLevelUp) {
+        if (that.selectedNonMammal === null || that.isLevelUpNonMammals) {
           let random = parseInt(Math.random() * 10, 10) % 1;
           if (level > 1) {
             for (let i = 0; i < that.usedNonMammals.length; i++) {
@@ -473,7 +491,7 @@ export default class Game extends React.Component {
           that.selectedNonMammal = obj;
           that.usedNonMammals.push(obj);
           that.animals.push(obj);
-          that.isLevelUp = false;
+          that.isLevelUpNonMammals = false;
           this.getLegends();
         }
         image = that.selectedNonMammal.image;
@@ -502,7 +520,7 @@ export default class Game extends React.Component {
       let image = this.__setImageForObstacle(boolMammal, performance.now());
       random = (bool === 0 ? 1 : -1) * random;
       res.push({
-        distance: random + this.obstaclesBase * 200,
+        distance: random + this.obstaclesBase * 230,
         height: bool ? 84 : 64 - this.options.playerImage[0].height,
         isMammal: boolMammal,
         image: image,
@@ -539,18 +557,19 @@ export default class Game extends React.Component {
 
   __doLevelUp() {
     this.level += 1;
-    this.obstacles = this.obstacles.concat(this.__obstaclesGenerate());
     this.levelMinimumSpeed += this.levelUpAt;
-    this.isLevelUp = true;
     this.isLevelUpMammals = true;
+    this.isLevelUpNonMammals = true;
+    this.__showLevelUp();
+    this.obstacles = this.obstacles.concat(this.__obstaclesGenerate());
   }
 
   __showLevelUp() {
-    this.setState({
-      showCanvas: false,
-      level: this.level
-    });
-    this.getLegends();
+    this.isLevelUp = true;
+    setTimeout(() => {
+      this.isLevelUp = false;
+      this.obstaclesBase -= (this.level * 2) - 1;
+    }, 1500);
   }
 
   start = () => {
