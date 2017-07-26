@@ -94,7 +94,7 @@ export default class Game extends React.Component {
     this.styleCanvas = { width: this.props.width }
 
     this.options.skySpeed = parseInt(this.options.fps / 3, 10);
-    this.options.totalTime += parseInt(this.options.levelLimit * 1.5, 10);
+    this.options.totalTime += parseInt(this.options.levelLimit * 3, 10);
 
     this.status = STATUS.STOP;
     this.timer = null;
@@ -239,6 +239,7 @@ export default class Game extends React.Component {
       if (this.level < this.options.levelLimit) {
         this.__doLevelUp();
       } else {
+        this.levelUpAt = 0;
         this.gameCompleted = true;
         this.__showLevelUp();
       }
@@ -568,8 +569,12 @@ export default class Game extends React.Component {
     this.isLevelUp = true;
     setTimeout(() => {
       this.isLevelUp = false;
-      this.obstaclesBase -= (this.level * 2) - 1;
-    }, 1500);
+      this.obstaclesBase -= (this.level * 2) - this.speed;
+      if (this.gameCompleted) {
+        this.gameCompleted = false;
+        this.obstaclesBase += 1;
+      }
+    }, 3000);
   }
 
   start = () => {
