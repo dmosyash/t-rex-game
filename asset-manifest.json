@@ -1,10 +1,16 @@
 {
-  "main.css": "static/css/main.47261e4d.css",
-  "main.css.map": "static/css/main.47261e4d.css.map",
-  "main.js": "static/js/main.76b68dec.js",
-  "main.js.map": "static/js/main.76b68dec.js.map",
+  "main.css": "static/css/main.46f4335b.css",
+  "main.css.map": "static/css/main.46f4335b.css.map",
+  "main.js": "static/js/main.55e35a22.js",
+  "main.js.map": "static/js/main.55e35a22.js.map",
   "static/media/dinosaur.png": "static/media/dinosaur.27ffca24.png",
   "static/media/dinosaur_die.png": "static/media/dinosaur_die.d8abe6e4.png",
   "static/media/dinosaur_left.png": "static/media/dinosaur_left.547d6d1b.png",
-  "static/media/dinosaur_right.png": "static/media/dinosaur_right.7a8359be.png"
+  "static/media/dinosaur_right.png": "static/media/dinosaur_right.7a8359be.png",
+  "static/media/flags.png": "static/media/flags.9c74e172.png",
+  "static/media/icons.eot": "static/media/icons.674f50d2.eot",
+  "static/media/icons.svg": "static/media/icons.912ec66d.svg",
+  "static/media/icons.ttf": "static/media/icons.b06871f2.ttf",
+  "static/media/icons.woff": "static/media/icons.fee66e71.woff",
+  "static/media/icons.woff2": "static/media/icons.af7ae505.woff2"
 }
