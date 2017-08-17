@@ -3,10 +3,14 @@ import { Router, Route, IndexRoute, hashHistory } from 'react-router'
 import Header from './Header.js'
 import Game from './Game.js';
 import './App.css';
+import { Button } from 'semantic-ui-react'
 
 const Container = (props) => <div>
   <Header />
   <br />
+   <Button>
+    Click Here
+  </Button>
   <br />
   {props.children}
 </div>
