@@ -9,8 +9,8 @@ import 'semantic-ui-css/semantic.min.css';
 const Container = (props) => <div>
   <Header />
   <br />
-   <Button>
-    Click Here
+   <Button circular size="massive" color="vk" style={{border: '1px solid', backgroundColor: 'black', padding: '20px'}}>
+    Click Here!
   </Button>
   <br />
   {props.children}

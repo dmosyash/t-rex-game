@@ -14,28 +14,31 @@ class Header extends Component {
 
         return (
             <Menu>
-                <Menu.Item
+                <Menu.Item as={ Link }
                 name='simple'
+                to="/"
                 active={activeItem === 'simple'}
                 onClick={this.handleItemClick}
                 >
-                <Link to='/'>Simplest</Link>
+                 Simplest 
                 </Menu.Item>
 
-                <Menu.Item
+                <Menu.Item as={ Link }
                 name='medium'
+                to="/medium"
                 active={activeItem === 'medium'}
                 onClick={this.handleItemClick}
                 >
-                <Link to='/medium'>Medium</Link>
+                Medium
                 </Menu.Item>
 
-                <Menu.Item
+                <Menu.Item as={ Link }
                 name='tough'
+                to="/tough"
                 active={activeItem === 'tough'}
                 onClick={this.handleItemClick}
                 >
-                <Link to='/tough'>Toughest</Link>
+                Toughest
                 </Menu.Item>
             </Menu>
         );
